@@ -1,11 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .models import PersonFindRequest, PersonFindResponse, ErrorResponse
+from .config import get_settings
+from .models import ErrorResponse, PersonFindRequest, PersonFindResponse
+from .agent.langchain_agent import run_with_agent
 from .search.service import run_person_search
 
 
-app = FastAPI(title="PersonFinderTool")
+settings = get_settings()
+app = FastAPI(title=settings.app_name)
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,6 +25,8 @@ async def health_check() -> dict:
 
 
 @app.post("/api/find-person", response_model=PersonFindResponse | ErrorResponse)
-async def find_person(payload: PersonFindRequest):
+def find_person(payload: PersonFindRequest):
+    if settings.enable_langchain_agent:
+        return run_with_agent(payload)
     return run_person_search(payload)
 
